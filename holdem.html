@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>greent | 텍사스 홀덤 (Texas Hold'em)</title>
+<style>
+:root{
+  --primary:#76b900;
+  --primary-hover:#8ce000;
+  --bg-dark:#000;
+  --bg-light:#1a1a1a;
+  --text-white:#fff;
+  --text-gray:#b1b1b1;
+  --felt:#0c3b25;
+  --felt-edge:#062315;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+  background:var(--bg-dark);
+  color:var(--text-white);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:24px 14px 50px;
+}
+h1{font-size:1.7rem;font-weight:700;margin-bottom:2px;}
+h1 .logo{color:var(--primary);text-transform:lowercase;}
+.subtitle{color:var(--text-gray);font-size:.85rem;margin-bottom:18px;}
+
+/* Table */
+.table{
+  position:relative;
+  width:100%;
+  max-width:760px;
+  background:radial-gradient(ellipse at center, var(--felt) 0%, var(--felt-edge) 100%);
+  border:10px solid #3a2416;
+  border-radius:180px/120px;
+  box-shadow:0 16px 50px rgba(0,0,0,.7), inset 0 0 60px rgba(0,0,0,.4);
+  padding:26px 20px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.ai-row{display:flex;justify-content:space-around;gap:16px;}
+.center-row{display:flex;flex-direction:column;align-items:center;gap:8px;min-height:120px;justify-content:center;}
+.human-row{display:flex;justify-content:center;}
+
+/* Seat */
+.seat{
+  background:rgba(0,0,0,.4);
+  border:2px solid transparent;
+  border-radius:12px;
+  padding:10px 12px;
+  min-width:150px;
+  text-align:center;
+  transition:border-color .25s, box-shadow .25s;
+}
+.seat.active{border-color:var(--primary);box-shadow:0 0 16px rgba(118,185,0,.5);}
+.seat.folded{opacity:.4;}
+.seat .name{font-weight:700;font-size:.9rem;}
+.seat .chips{color:var(--primary);font-size:.82rem;font-weight:600;}
+.seat .cards{display:flex;gap:5px;justify-content:center;margin:7px 0 4px;}
+.seat .meta{display:flex;gap:5px;justify-content:center;align-items:center;min-height:18px;}
+.badge{font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:20px;background:#444;}
+.badge.d{background:#fff;color:#000;}
+.badge.sb{background:#4a90d9;color:#fff;}
+.badge.bb{background:#d94a4a;color:#fff;}
+.badge.allin{background:var(--primary);color:#000;}
+.bet-chip{
+  font-size:.72rem;font-weight:700;color:#fff;
+  background:rgba(118,185,0,.25);
+  border:1px solid var(--primary);
+  border-radius:20px;padding:2px 8px;margin-top:4px;display:inline-block;min-height:0;
+}
+.rank-hint{font-size:.72rem;color:var(--primary);margin-top:2px;min-height:14px;}
+
+/* Cards */
+.card{
+  width:46px;height:66px;border-radius:6px;background:#fff;color:#111;
+  display:flex;flex-direction:column;justify-content:space-between;
+  padding:4px 5px;font-weight:800;
+  box-shadow:0 2px 5px rgba(0,0,0,.4);
+  font-size:1rem;line-height:1;
+}
+.card .top{align-self:flex-start;}
+.card .bot{align-self:flex-end;transform:rotate(180deg);}
+.card.red{color:#d11;}
+.card.back{
+  background:repeating-linear-gradient(45deg,#3a5f00,#3a5f00 6px,#4d7a00 6px,#4d7a00 12px);
+  border:2px solid #76b900;
+}
+.card.small{width:38px;height:54px;font-size:.85rem;}
+.community{display:flex;gap:8px;}
+
+/* Pot */
+.pot{
+  background:rgba(0,0,0,.5);
+  border:1px solid var(--primary);
+  border-radius:24px;
+  padding:5px 18px;
+  font-weight:700;
+  font-size:.95rem;
+}
+.pot span{color:var(--primary);}
+
+/* Log + controls */
+.log{
+  margin-top:14px;height:40px;color:var(--text-gray);font-size:.85rem;
+  text-align:center;display:flex;align-items:center;justify-content:center;
+}
+.controls{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;
+  margin-top:6px;min-height:48px;
+}
+button{
+  font-family:inherit;cursor:pointer;border:none;border-radius:7px;
+  padding:11px 22px;font-size:.9rem;font-weight:700;transition:all .18s;
+  background:#2a2a2a;color:#fff;
+}
+button:hover:not(:disabled){background:#3a3a3a;}
+button:disabled{opacity:.35;cursor:not-allowed;}
+button.fold{background:#7a2020;}
+button.fold:hover:not(:disabled){background:#953030;}
+button.call{background:#2a5a8a;}
+button.call:hover:not(:disabled){background:#356fac;}
+button.raise{background:var(--primary);color:#000;}
+button.raise:hover:not(:disabled){background:var(--primary-hover);}
+button.primary{background:var(--primary);color:#000;}
+.raise-panel{display:flex;align-items:center;gap:10px;background:var(--bg-light);padding:8px 14px;border-radius:8px;}
+.raise-panel input[type=range]{width:150px;accent-color:var(--primary);}
+.raise-panel .amt{font-weight:700;color:var(--primary);min-width:56px;text-align:center;}
+.result{color:var(--primary);font-weight:700;font-size:1rem;}
+.hint{color:var(--text-gray);font-size:.78rem;margin-top:16px;text-align:center;max-width:520px;}
+
+/* Dev / rig bar */
+.devbar{margin-bottom:12px;}
+.devbar label{
+  display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+  font-size:.82rem;color:var(--text-gray);
+  background:var(--bg-light);padding:7px 14px;border-radius:8px;
+  border:1px solid #333;
+}
+.devbar input{accent-color:var(--primary);width:15px;height:15px;}
+.card.slot{background:rgba(255,255,255,.06);box-shadow:none;}
+.card.slot.clickable{cursor:pointer;color:var(--primary);align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;border:2px dashed rgba(118,185,0,.5);}
+.card.slot.clickable:hover{background:rgba(118,185,0,.15)!important;}
+.card.rigged-card{opacity:.7;outline:2px dashed var(--primary);outline-offset:1px;}
+.card.rigged-card.clickable{cursor:pointer;opacity:.85;}
+
+/* Card picker overlay */
+.picker-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);
+  display:flex;align-items:center;justify-content:center;z-index:2000;padding:20px;
+}
+.picker{
+  background:var(--bg-light);border:1px solid #333;border-radius:12px;
+  padding:20px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);
+}
+.picker-title{font-weight:700;margin-bottom:14px;text-align:center;}
+.picker-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;
+  margin-bottom:16px;
+}
+.picker-grid .card.pickable{cursor:pointer;transition:transform .12s;}
+.picker-grid .card.pickable:hover{transform:translateY(-4px) scale(1.06);outline:2px solid var(--primary);}
+.picker-actions{display:flex;gap:10px;justify-content:flex-end;}
+</style>
+</head>
+<body>
+  <h1><span class="logo">greent</span> 텍사스 홀덤</h1>
+  <p class="subtitle">AI 봇 2명과 대결 · 스타팅 칩 1000 · 블라인드 10/20</p>
+
+  <div class="devbar">
+    <label><input type="checkbox" id="rigToggle"> 🎴 카드 조작 모드 — 아직 안 깐 커뮤니티 카드를 미리 지정</label>
+  </div>
+
+  <div class="table" id="table"></div>
+
+  <div class="log" id="log">새 게임을 시작합니다.</div>
+  <div class="controls" id="controls"></div>
+
+  <p class="hint">폴드 / 체크·콜 / 레이즈 버튼으로 플레이합니다. 슬라이더로 레이즈 금액을 조절하세요. 가로·세로·대각선이 아닌, 커뮤니티 카드 5장과 내 홀 카드 2장 중 최고의 5장 족보로 승부합니다.</p>
+
+<script>
+(function(){
+  "use strict";
+  const SUITS = ['♠','♥','♦','♣'];   // 0 spade,1 heart,2 diamond,3 club
+  const RED = new Set([1,2]);
+  const RANK_STR = {11:'J',12:'Q',13:'K',14:'A'};
+  const START_CHIPS = 1000, SB = 10, BB = 20;
+  const CAT_NAMES = ['하이카드','원페어','투페어','트리플','스트레이트','플러시','풀하우스','포카드','스트레이트 플러시'];
+
+  const tableEl = document.getElementById('table');
+  const logEl = document.getElementById('log');
+  const controlsEl = document.getElementById('controls');
+
+  let players, deck, community, phase, currentBet, minRaise, buttonSeat, toAct, reveal, handOver, gameOver;
+  let rigged = [null,null,null,null,null];   // pre-set community cards (조작 모드)
+  let rigMode = false;
+
+  players = [
+    {name:'당신', isAI:false, chips:START_CHIPS},
+    {name:'AI 봇 A', isAI:true, chips:START_CHIPS},
+    {name:'AI 봇 B', isAI:true, chips:START_CHIPS},
+  ];
+  buttonSeat = 0;
+
+  /* ---------------- Deck ---------------- */
+  function makeDeck(){
+    const d=[];
+    for(let s=0;s<4;s++) for(let r=2;r<=14;r++) d.push({rank:r, suit:s});
+    // Fisher–Yates
+    for(let i=d.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [d[i],d[j]]=[d[j],d[i]];
+    }
+    return d;
+  }
+  const rankLabel = r => RANK_STR[r] || String(r);
+
+  /* ---------------- Hand evaluation ---------------- */
+  // Evaluate a 5-card hand -> single comparable integer.
+  function eval5(cards){
+    const ranks = cards.map(c=>c.rank).sort((a,b)=>b-a);
+    const suits = cards.map(c=>c.suit);
+    const flush = suits.every(s=>s===suits[0]);
+    const cnt={};
+    for(const r of ranks) cnt[r]=(cnt[r]||0)+1;
+    const groups = Object.keys(cnt).map(r=>[+r,cnt[r]])
+        .sort((a,b)=> b[1]-a[1] || b[0]-a[0]);
+    const uniq=[...new Set(ranks)];
+    let straightHigh=0;
+    if(uniq.length===5){
+      if(ranks[0]-ranks[4]===4) straightHigh=ranks[0];
+      else if(ranks[0]===14 && ranks[1]===5 && ranks[4]===2) straightHigh=5; // wheel
+    }
+    const isStraight = straightHigh>0;
+    let cat, tb;
+    if(isStraight && flush){ cat=8; tb=[straightHigh]; }
+    else if(groups[0][1]===4){ cat=7; tb=[groups[0][0],groups[1][0]]; }
+    else if(groups[0][1]===3 && groups[1][1]>=2){ cat=6; tb=[groups[0][0],groups[1][0]]; }
+    else if(flush){ cat=5; tb=ranks.slice(); }
+    else if(isStraight){ cat=4; tb=[straightHigh]; }
+    else if(groups[0][1]===3){ cat=3; tb=[groups[0][0],...groups.slice(1).map(g=>g[0])]; }
+    else if(groups[0][1]===2 && groups[1][1]===2){ cat=2; tb=[groups[0][0],groups[1][0],groups[2][0]]; }
+    else if(groups[0][1]===2){ cat=1; tb=[groups[0][0],...groups.slice(1).map(g=>g[0])]; }
+    else { cat=0; tb=ranks.slice(); }
+    while(tb.length<5) tb.push(0);
+    let score=cat;
+    for(let i=0;i<5;i++) score = score*15 + tb[i];
+    return score;
+  }
+  // Best 5 of up to 7 cards.
+  function bestHand(cards){
+    let best=-1;
+    const n=cards.length;
+    if(n<5) return -1;
+    // evaluate every 5-card subset, keep the max score
+    const idx=[];
+    const combo=(start,pick)=>{
+      if(pick===0){ const s=eval5(idx.map(i=>cards[i])); if(s>best) best=s; return; }
+      for(let i=start;i<=n-pick;i++){ idx.push(i); combo(i+1,pick-1); idx.pop(); }
+    };
+    combo(0,5);
+    return best;
+  }
+  const catOf = score => Math.floor(score / 759375); // 15^5
+
+  /* ---------------- Chips ---------------- */
+  function commit(p, amount){
+    amount = Math.min(amount, p.chips);
+    p.chips -= amount; p.bet += amount; p.totalBet += amount;
+    if(p.chips===0) p.allIn=true;
+    return amount;
+  }
+  const potSize = () => players.reduce((s,p)=>s+p.totalBet,0);
+  const inHandCount = () => players.filter(p=>!p.folded).length;
+
+  function nextInHand(seat){
+    let i=(seat+1)%3, g=0;
+    while(g++<3){ if(players[i].inHand) return i; i=(i+1)%3; }
+    return seat;
+  }
+  function nextInGame(seat){
+    let i=(seat+1)%3, g=0;
+    while(g++<3){ if(players[i].chips>0) return i; i=(i+1)%3; }
+    return seat;
+  }
+
+  /* ---------------- Hand lifecycle ---------------- */
+  function startHand(){
+    if(players.filter(p=>p.chips>0).length < 2){ declareChampion(); return; }
+    deck = makeDeck();
+    community = [];
+    rigged = [null,null,null,null,null];
+    phase='preflop'; reveal=false; handOver=false; gameOver=false;
+    currentBet=BB; minRaise=BB;
+
+    players.forEach(p=>{
+      p.inHand = p.chips>0;
+      p.folded = !p.inHand;
+      p.allIn=false; p.bet=0; p.totalBet=0; p.hasActed=false; p.hole=[]; p.handScore=0;
+    });
+    // move button to a player still in the game
+    buttonSeat = nextInGame(buttonSeat);
+
+    // deal 2 hole cards each
+    for(let k=0;k<2;k++) players.forEach(p=>{ if(p.inHand) p.hole.push(deck.pop()); });
+
+    // blinds & first to act
+    const ig = players.filter(p=>p.inHand).length;
+    let sb, bb, firstPre;
+    if(ig===2){ sb=buttonSeat; bb=nextInHand(buttonSeat); firstPre=sb; }
+    else { sb=nextInHand(buttonSeat); bb=nextInHand(sb); firstPre=nextInHand(bb); }
+    players.sbSeat=sb; players.bbSeat=bb; // stash for badges
+    commit(players[sb], SB);
+    commit(players[bb], BB);
+    currentBet=BB; minRaise=BB;
+    toAct=firstPre;
+
+    setLog(`새 핸드 시작 — 딜러: ${players[buttonSeat].name}`);
+    step();
+  }
+
+  function firstToActPostflop(){
+    const ig = players.filter(p=>p.inHand).length;
+    return ig===2 ? players.bbSeat : nextInHand(buttonSeat);
+  }
+
+  function dealCommunity(n){
+    for(let i=0;i<n;i++){
+      const pos=community.length;
+      if(rigged[pos]){ community.push(rigged[pos]); rigged[pos]=null; }  // 조작된 카드 사용
+      else community.push(deck.pop());
+    }
+  }
+
+  /* ---------- Card rigging (조작 모드) ---------- */
+  // Remove a card from wherever it currently sits so it can be reserved.
+  function removeCardFromPlay(card){
+    const k=cardKey(card);
+    const di=deck.findIndex(c=>cardKey(c)===k);
+    if(di>=0){ deck.splice(di,1); return; }
+    // if it's in an AI's hole, swap that card out for a fresh one from the deck
+    for(const p of players){
+      if(p.isAI && p.inHand){
+        const hi=p.hole.findIndex(c=>cardKey(c)===k);
+        if(hi>=0){ p.hole[hi]=deck.pop(); return; }
+      }
+    }
+  }
+  function pickCard(pos, card){
+    if(pos < community.length) return;      // already on the board
+    if(rigged[pos]) deck.unshift(rigged[pos]);   // return previously reserved card to bottom
+    removeCardFromPlay(card);
+    rigged[pos]=card;
+  }
+  function unrig(pos){ if(rigged[pos]){ deck.unshift(rigged[pos]); rigged[pos]=null; } }
+
+  function openPicker(pos){
+    const used=new Set();
+    community.forEach(c=>used.add(cardKey(c)));
+    players[0].hole.forEach(c=>used.add(cardKey(c)));   // human's own cards are visible
+    rigged.forEach((c,i)=>{ if(c && i!==pos) used.add(cardKey(c)); });
+    const ov=document.createElement('div'); ov.className='picker-overlay';
+    const box=document.createElement('div'); box.className='picker';
+    const title=document.createElement('div'); title.className='picker-title';
+    title.textContent=`커뮤니티 ${pos+1}번 카드 지정`;
+    box.appendChild(title);
+    const grid=document.createElement('div'); grid.className='picker-grid';
+    for(let s=0;s<4;s++) for(let r=2;r<=14;r++){
+      const card={rank:r,suit:s};
+      if(used.has(cardKey(card))) continue;
+      const el=cardEl(card,true); el.classList.add('pickable');
+      el.onclick=()=>{ pickCard(pos,card); close(); render(); };
+      grid.appendChild(el);
+    }
+    box.appendChild(grid);
+    const actions=document.createElement('div'); actions.className='picker-actions';
+    if(rigged[pos]){
+      const clr=document.createElement('button'); clr.className='fold'; clr.textContent='지정 해제';
+      clr.onclick=()=>{ unrig(pos); close(); render(); }; actions.appendChild(clr);
+    }
+    const cl=document.createElement('button'); cl.className='primary'; cl.textContent='닫기'; cl.onclick=close;
+    actions.appendChild(cl);
+    box.appendChild(actions);
+    ov.appendChild(box);
+    ov.onclick=(e)=>{ if(e.target===ov) close(); };
+    function close(){ if(ov.parentNode) document.body.removeChild(ov); }
+    document.body.appendChild(ov);
+  }
+
+  function advancePhase(){
+    if(phase==='preflop'){ phase='flop'; dealCommunity(3); }
+    else if(phase==='flop'){ phase='turn'; dealCommunity(1); }
+    else if(phase==='turn'){ phase='river'; dealCommunity(1); }
+    else { showdown(); return; }
+    players.forEach(p=>{ p.bet=0; p.hasActed=false; });
+    currentBet=0; minRaise=BB;
+    toAct=firstToActPostflop();
+    setLog(phaseName());
+    step();
+  }
+  function phaseName(){
+    return {preflop:'프리플랍',flop:'플랍',turn:'턴',river:'리버'}[phase];
+  }
+
+  function roundComplete(){
+    const elig = players.filter(p=>!p.folded && !p.allIn && p.chips>0);
+    if(elig.length===0) return true;
+    return elig.every(p=>p.hasActed && p.bet===currentBet);
+  }
+
+  function step(){
+    render();
+    if(inHandCount()===1){ setTimeout(awardToLast, 550); return; }
+    if(roundComplete()){ setTimeout(advancePhase, 650); return; }
+    // find next player who must act
+    let g=0;
+    while(g++<6){
+      const p=players[toAct];
+      const mustAct = !p.folded && !p.allIn && p.chips>0 && !(p.hasActed && p.bet===currentBet);
+      if(mustAct) break;
+      toAct=(toAct+1)%3;
+    }
+    render();
+    const p=players[toAct];
+    if(p.isAI){ controlsEl.innerHTML=''; setLog(`${p.name} 고민 중...`); setTimeout(()=>aiAct(p), 850); }
+    else { enableControls(p); }
+  }
+
+  /* ---------------- Actions ---------------- */
+  function afterAction(){ controlsEl.innerHTML=''; step(); }
+
+  function doFold(p){ p.folded=true; p.hasActed=true; setLog(`${p.name} 폴드`); afterAction(); }
+  function doCheck(p){ p.hasActed=true; setLog(`${p.name} 체크`); afterAction(); }
+  function doCall(p){
+    const amt=commit(p, currentBet-p.bet); p.hasActed=true;
+    setLog(`${p.name} 콜 (${amt}${p.allIn?', 올인':''})`); afterAction();
+  }
+  function doRaiseTo(p, target){
+    const prev=currentBet;
+    target=Math.min(target, p.bet+p.chips);
+    commit(p, target-p.bet);
+    if(p.bet>prev){
+      const rs=p.bet-prev;
+      if(rs>=minRaise) minRaise=rs;
+      currentBet=p.bet;
+      players.forEach(o=>{ if(o!==p && !o.folded && !o.allIn) o.hasActed=false; });
+    }
+    p.hasActed=true;
+    setLog(`${p.name} ${prev===0?'벳':'레이즈'} → ${p.bet}${p.allIn?' (올인)':''}`);
+    afterAction();
+  }
+
+  /* ---------------- AI ----------------
+     Monte Carlo equity: deal random opponent hands + remaining board many
+     times and count how often this hand wins/ties. This is the AI's real
+     probability of winning, which it compares against the pot odds. */
+  const cardKey = c => c.rank*4 + c.suit;
+
+  function equity(hole, board, numOpp, iters){
+    if(numOpp<=0) return 1;
+    const used=new Set();
+    hole.forEach(c=>used.add(cardKey(c)));
+    board.forEach(c=>used.add(cardKey(c)));
+    const rest=[];
+    for(let s=0;s<4;s++) for(let r=2;r<=14;r++){
+      const c={rank:r,suit:s};
+      if(!used.has(cardKey(c))) rest.push(c);
+    }
+    const boardNeed = 5 - board.length;
+    const need = numOpp*2 + boardNeed;
+    let win=0, split=0;
+    for(let it=0; it<iters; it++){
+      // partial Fisher–Yates: only shuffle the cards we consume this round
+      for(let i=0;i<need;i++){
+        const j = i + Math.floor(Math.random()*(rest.length-i));
+        const t=rest[i]; rest[i]=rest[j]; rest[j]=t;
+      }
+      let idx=0;
+      const extra=[]; for(let b=0;b<boardNeed;b++) extra.push(rest[idx++]);
+      const fb = board.concat(extra);
+      const myScore = bestHand(hole.concat(fb));
+      let iWin=true, iTie=false;
+      for(let o=0;o<numOpp;o++){
+        const os = bestHand([rest[idx++], rest[idx++]].concat(fb));
+        if(os>myScore){ iWin=false; break; }
+        if(os===myScore) iTie=true;
+      }
+      if(iWin){ if(iTie) split++; else win++; }
+    }
+    return (win + split*0.5)/iters;
+  }
+
+  function aiRaiseTarget(p, eq){
+    const pot=potSize();
+    const frac = eq>0.82 ? 0.9 : eq>0.6 ? 0.66 : 0.5;
+    let t = currentBet + Math.max(minRaise, Math.round(pot*frac));
+    return Math.min(t, p.bet+p.chips);
+  }
+
+  function aiAct(p){
+    if(handOver) return;
+    const toCall = currentBet - p.bet;
+    const numOpp = players.filter(o=>o!==p && !o.folded).length;
+    const iters = community.length===0 ? 320 : (community.length<5 ? 260 : 200);
+    const eq = equity(p.hole, community, numOpp, iters);
+    const pot = potSize();
+    const r = Math.random();
+    const canRaise = (p.bet+p.chips) > currentBet;
+
+    if(toCall<=0){
+      // nothing to call: check, value-bet, or occasionally bluff
+      if(canRaise && eq>0.66 && r<0.85) doRaiseTo(p, aiRaiseTarget(p,eq));
+      else if(canRaise && eq>0.5 && r<0.5) doRaiseTo(p, aiRaiseTarget(p,eq));
+      else if(canRaise && eq<0.33 && r<0.14) doRaiseTo(p, aiRaiseTarget(p,eq)); // bluff
+      else doCheck(p);
+    } else {
+      const potOdds = toCall/(pot+toCall);
+      // strong hands raise for value
+      if(canRaise && eq>0.85 && r<0.85){ doRaiseTo(p, aiRaiseTarget(p,eq)); return; }
+      if(canRaise && eq>0.7 && r<0.5){ doRaiseTo(p, aiRaiseTarget(p,eq)); return; }
+      // call whenever equity beats the pot odds (small buffer to avoid over-folding marginal spots)
+      if(eq >= potOdds - 0.04){ doCall(p); return; }
+      // cheap bluff-catch now and then
+      if(toCall <= pot*0.18 && r<0.28){ doCall(p); return; }
+      doFold(p);
+    }
+  }
+
+  /* ---------------- Showdown & pots ---------------- */
+  function showdown(){
+    reveal=true;
+    players.forEach(p=>{ if(!p.folded) p.handScore=bestHand([...p.hole,...community]); });
+    distributePots();
+    render();
+  }
+  function distributePots(){
+    const rem = players.map((p,i)=>({i, amt:p.totalBet, folded:p.folded}));
+    const pots=[];
+    while(true){
+      const pos=rem.filter(r=>r.amt>0);
+      if(pos.length===0) break;
+      const min=Math.min(...pos.map(r=>r.amt));
+      let amount=0; const elig=[];
+      for(const r of rem){
+        if(r.amt>0){ amount+=min; r.amt-=min; if(!r.folded) elig.push(r.i); }
+      }
+      pots.push({amount, elig});
+    }
+    const wonBy={};
+    for(const pot of pots){
+      if(pot.elig.length===0) continue;
+      let best=-1, winners=[];
+      for(const i of pot.elig){
+        const sc=players[i].handScore;
+        if(sc>best){ best=sc; winners=[i]; }
+        else if(sc===best) winners.push(i);
+      }
+      const share=Math.floor(pot.amount/winners.length);
+      let leftover=pot.amount-share*winners.length;
+      winners.forEach((w,k)=>{ players[w].chips += share + (k===0?leftover:0); wonBy[w]=(wonBy[w]||0)+share+(k===0?leftover:0); });
+    }
+    const msgs = Object.keys(wonBy).map(i=>{
+      const p=players[i];
+      return `${p.name} +${wonBy[i]} (${CAT_NAMES[catOf(p.handScore)]})`;
+    });
+    endHand(msgs.join('  ·  '));
+  }
+  function awardToLast(){
+    const winner=players.find(p=>!p.folded);
+    const pot=potSize();
+    winner.chips += pot;
+    endHand(`${winner.name} 승리 (+${pot}) — 나머지 폴드`);
+  }
+  function endHand(resultMsg){
+    handOver=true;
+    render();
+    setLog(resultMsg, true);
+    if(players.filter(p=>p.chips>0).length<2){ declareChampion(); return; }
+    controlsEl.innerHTML='';
+    const btn=document.createElement('button');
+    btn.className='primary'; btn.textContent='다음 핸드 ▶';
+    btn.onclick=startHand;
+    controlsEl.appendChild(btn);
+  }
+  function declareChampion(){
+    handOver=true; gameOver=true; render();
+    const champ=players.reduce((a,b)=>a.chips>=b.chips?a:b);
+    setLog(`🏆 게임 종료 — 최종 우승: ${champ.name} (${champ.chips} 칩)`, true);
+    controlsEl.innerHTML='';
+    const btn=document.createElement('button');
+    btn.className='primary'; btn.textContent='새 게임 시작';
+    btn.onclick=()=>{ players.forEach(p=>p.chips=START_CHIPS); buttonSeat=0; startHand(); };
+    controlsEl.appendChild(btn);
+  }
+
+  /* ---------------- Human controls ---------------- */
+  function enableControls(p){
+    controlsEl.innerHTML='';
+    const toCall=currentBet-p.bet;
+
+    const fold=document.createElement('button');
+    fold.className='fold'; fold.textContent='폴드';
+    fold.onclick=()=>doFold(p);
+    controlsEl.appendChild(fold);
+
+    const cc=document.createElement('button');
+    cc.className='call';
+    if(toCall<=0){ cc.textContent='체크'; cc.onclick=()=>doCheck(p); }
+    else{ cc.textContent=`콜 ${Math.min(toCall,p.chips)}`; cc.onclick=()=>doCall(p); }
+    controlsEl.appendChild(cc);
+
+    const maxTo=p.bet+p.chips;
+    const minTo=Math.min(currentBet+minRaise, maxTo);
+    if(maxTo>currentBet){
+      const panel=document.createElement('div');
+      panel.className='raise-panel';
+      const range=document.createElement('input');
+      range.type='range'; range.min=minTo; range.max=maxTo; range.value=Math.min(minTo, maxTo); range.step=SB;
+      const amt=document.createElement('span'); amt.className='amt'; amt.textContent=range.value;
+      range.oninput=()=>{ amt.textContent=range.value; };
+      const go=document.createElement('button');
+      go.className='raise';
+      const label=()=> (currentBet===0?'벳':'레이즈');
+      go.textContent = label();
+      const setAllInLabel=()=>{ go.textContent = (+range.value>=maxTo)?'올인':label(); };
+      range.addEventListener('input', setAllInLabel);
+      setAllInLabel();
+      go.onclick=()=>doRaiseTo(p, +range.value);
+      panel.appendChild(range); panel.appendChild(amt); panel.appendChild(go);
+      controlsEl.appendChild(panel);
+    } else {
+      // can only call all-in; add explicit all-in if calling puts all in
+    }
+  }
+
+  /* ---------------- Rendering ---------------- */
+  function cardEl(card, small){
+    const d=document.createElement('div');
+    d.className='card'+(small?' small':'')+(RED.has(card.suit)?' red':'');
+    const top=document.createElement('span'); top.className='top'; top.textContent=rankLabel(card.rank)+SUITS[card.suit];
+    const bot=document.createElement('span'); bot.className='bot'; bot.textContent=rankLabel(card.rank)+SUITS[card.suit];
+    d.appendChild(top); d.appendChild(bot);
+    return d;
+  }
+  function backEl(small){
+    const d=document.createElement('div'); d.className='card back'+(small?' small':''); return d;
+  }
+
+  function seatEl(i){
+    const p=players[i];
+    const seat=document.createElement('div');
+    seat.className='seat'+(p.folded?' folded':'')+(toAct===i && !handOver?' active':'');
+    const name=document.createElement('div'); name.className='name'; name.textContent=p.name;
+    const chips=document.createElement('div'); chips.className='chips'; chips.textContent='칩 '+p.chips;
+    const cards=document.createElement('div'); cards.className='cards';
+    if(p.inHand){
+      const showFace = !p.isAI || reveal;
+      p.hole.forEach(c=> cards.appendChild(showFace?cardEl(c):backEl()));
+    }
+    const meta=document.createElement('div'); meta.className='meta';
+    if(i===buttonSeat){ meta.appendChild(badge('D','d')); }
+    if(i===players.sbSeat){ meta.appendChild(badge('SB','sb')); }
+    if(i===players.bbSeat){ meta.appendChild(badge('BB','bb')); }
+    if(p.allIn){ meta.appendChild(badge('ALL-IN','allin')); }
+
+    seat.appendChild(name); seat.appendChild(chips); seat.appendChild(cards); seat.appendChild(meta);
+    if(p.bet>0){ const bc=document.createElement('div'); bc.className='bet-chip'; bc.textContent='벳 '+p.bet; seat.appendChild(bc); }
+    // hand rank hint for human
+    if(!p.isAI && p.inHand && community.length>0){
+      const hint=document.createElement('div'); hint.className='rank-hint';
+      const sc=bestHand([...p.hole,...community]);
+      hint.textContent = sc>=0 ? CAT_NAMES[catOf(sc)] : '';
+      seat.appendChild(hint);
+    }
+    return seat;
+  }
+  function badge(txt,cls){ const b=document.createElement('span'); b.className='badge '+cls; b.textContent=txt; return b; }
+
+  function render(){
+    tableEl.innerHTML='';
+    const aiRow=document.createElement('div'); aiRow.className='ai-row';
+    aiRow.appendChild(seatEl(1)); aiRow.appendChild(seatEl(2));
+    tableEl.appendChild(aiRow);
+
+    const center=document.createElement('div'); center.className='center-row';
+    const pot=document.createElement('div'); pot.className='pot';
+    pot.innerHTML='팟 <span>'+potSize()+'</span>';
+    center.appendChild(pot);
+    const comm=document.createElement('div'); comm.className='community';
+    community.forEach(c=> comm.appendChild(cardEl(c)));
+    for(let k=community.length;k<5;k++){
+      let slot;
+      if(rigged[k]){
+        slot=cardEl(rigged[k]);
+        slot.classList.add('rigged-card');
+      } else {
+        slot=document.createElement('div'); slot.className='card slot';
+        if(rigMode && !handOver) slot.textContent='＋';
+      }
+      if(rigMode && !handOver){ slot.classList.add('clickable'); slot.onclick=()=>openPicker(k); }
+      comm.appendChild(slot);
+    }
+    center.appendChild(comm);
+    tableEl.appendChild(center);
+
+    const humanRow=document.createElement('div'); humanRow.className='human-row';
+    humanRow.appendChild(seatEl(0));
+    tableEl.appendChild(humanRow);
+  }
+
+  function setLog(msg, result){ logEl.className = 'log'; logEl.innerHTML = result?('<span class="result">'+msg+'</span>'):msg; }
+
+  document.getElementById('rigToggle').addEventListener('change', e=>{
+    rigMode = e.target.checked;
+    render();
+  });
+
+  // Kickoff
+  startHand();
+})();
+</script>
+</body>
+</html>
